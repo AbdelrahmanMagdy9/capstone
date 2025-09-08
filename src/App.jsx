@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import TimerDisplay from './components/TimerDisplay';
 import Controls from './components/Controls';
 import MusicUploader from './components/MusicUploader';
@@ -10,6 +10,8 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(WORK_DURATION);
   const [isActive, setIsActive] = useState(false);
   const [isWorkSession, setIsWorkSession] = useState(true);
+  const [musicUrl, setMusicUrl] = useState(null);
+  const audioRef = useRef(null);
 
   useEffect(() => {
     let interval = null;
@@ -24,6 +26,12 @@ export default function App() {
       setTimeLeft(isWorkSession ? BREAK_DURATION : WORK_DURATION);
     }
 
+    if (isActive && audioRef.current) {
+      audioRef.current.play().catch(error => console.log("Playback was prevented.", error));
+    } else if (!isActive && audioRef.current) {
+      audioRef.current.pause();
+    }
+
     return () => clearInterval(interval);
   }, [isActive, timeLeft, isWorkSession]);
 
@@ -35,6 +43,17 @@ export default function App() {
     setIsActive(false);
     setIsWorkSession(true);
     setTimeLeft(WORK_DURATION);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  };
+
+  const handleMusicUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setMusicUrl(URL.createObjectURL(file));
+    }
   };
 
   const formatTime = (seconds) => {
@@ -55,7 +74,8 @@ export default function App() {
           onToggle={toggleTimer}
           onReset={resetTimer}
         />
-        <MusicUploader />
+        <MusicUploader onMusicUpload={handleMusicUpload} />
+        {musicUrl && <audio ref={audioRef} src={musicUrl} loop />}
       </div>
     </div>
   );
